@@ -1,5 +1,15 @@
-import { type JsonError, type JsonSchema } from "json-schema-library";
-import { type ComponentPropsWithoutRef, type ReactNode, useEffect, useRef, useState } from "react";
+import { type JsonSchema } from "json-schema-library";
+import {
+   type ComponentPropsWithoutRef,
+   type ForwardedRef,
+   type ReactNode,
+   type RefObject,
+   forwardRef,
+   useEffect,
+   useImperativeHandle,
+   useRef,
+   useState
+} from "react";
 import { formDataToNestedObject } from "./lib/form-data";
 
 const cache = new Map<string, JsonSchema>();
@@ -20,13 +30,21 @@ export type FormRenderProps<Err> = {
    resetDirty: () => void;
 };
 
-export type FormProps<
-   FormData = any,
-   ValFn = ValidationFn,
-   Err = ValFn extends ValidationFn<FormData, infer E> ? Awaited<E> : never
-> = Omit<ComponentPropsWithoutRef<"form">, "onSubmit" | "onChange" | "children"> & {
+export type FormRef<FormData, Err> = {
+   submit: () => Promise<void>;
+   validate: () => Promise<{ data: FormData; errors: Err[] }>;
+   reset: () => void;
+   resetDirty: () => void;
+   formRef: RefObject<HTMLFormElement | null>;
+};
+
+export type FormProps<FormData, ValFn, Err> = Omit<
+   ComponentPropsWithoutRef<"form">,
+   "onSubmit" | "onChange" | "children"
+> & {
    schema: `http${string}` | `/${string}` | JsonSchema;
    validate: ValidationFn<FormData, Err>;
+   validationMode?: "submit" | "change";
    children: (props: FormRenderProps<Err>) => ReactNode;
    onChange?: (formData: FormData, changed: ChangeSet) => void | Promise<void>;
    onSubmit?: (formData: FormData) => void | Promise<void>;
@@ -36,22 +54,22 @@ export type FormProps<
    hiddenSubmit?: boolean;
 };
 
-export const Form = <
-   FormData = any,
-   ValFn = ValidationFn,
-   Err = ValFn extends ValidationFn<FormData, infer E> ? Awaited<E> : never
->({
-   schema: initialSchema,
-   validate: validateFn,
-   children,
-   onChange,
-   onSubmit,
-   onSubmitInvalid,
-   resetOnSubmit,
-   revalidateOnError = true,
-   hiddenSubmit,
-   ...formProps
-}: FormProps<FormData, ValFn, Err>) => {
+const FormComponent = <FormData, ValFn, Err>(
+   {
+      schema: initialSchema,
+      validate: validateFn,
+      validationMode = "submit",
+      children,
+      onChange,
+      onSubmit,
+      onSubmitInvalid,
+      resetOnSubmit,
+      revalidateOnError = true,
+      hiddenSubmit,
+      ...formProps
+   }: FormProps<FormData, ValFn, Err>,
+   ref: ForwardedRef<FormRef<FormData, Err>>
+) => {
    const is_schema = typeof initialSchema !== "string";
    const [schema, setSchema] = useState<JsonSchema | undefined>(
       is_schema ? initialSchema : undefined
@@ -64,6 +82,14 @@ export const Form = <
    function resetDirty() {
       setDirty(false);
    }
+
+   useImperativeHandle(ref, () => ({
+      submit: submit,
+      validate: validate,
+      reset: reset,
+      resetDirty,
+      formRef
+   }));
 
    useEffect(() => {
       (async () => {
@@ -101,7 +127,7 @@ export const Form = <
 
       await onChange?.(data, { name, value });
 
-      if (revalidateOnError && errors.length > 0) {
+      if ((revalidateOnError && errors.length > 0) || validationMode === "change") {
          await validate();
       }
    }
@@ -172,3 +198,13 @@ export const Form = <
       </form>
    );
 };
+
+export const Form = forwardRef(FormComponent) as <
+   FormData = any,
+   ValFn = ValidationFn,
+   Err = ValFn extends ValidationFn<FormData, infer E> ? Awaited<E> : never
+>(
+   props: FormProps<FormData, ValFn, Err> & {
+      ref?: ForwardedRef<HTMLFormElement>;
+   }
+) => ReturnType<typeof FormComponent>;

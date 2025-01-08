@@ -7,9 +7,10 @@ const schema = {
    type: "object",
    properties: {
       name: { type: "string" },
+      age: { type: "number", minimum: 1 },
       url: { type: "string" }
    },
-   required: ["name"]
+   required: ["name", "age"]
 };
 
 function validate(schema: JsonSchema, data: any): JsonError[] {
@@ -28,12 +29,15 @@ export default function App() {
             onChange={(data) => setData(data)}
             onSubmit={(data) => setSubmitted(data)}
             validate={validate}
+            validationMode="change"
             hiddenSubmit
          >
             {({ errors, submitting, dirty, submit, reset }) => (
                <>
                   <div>
-                     <b>Form {dirty ? "*" : ""}</b>
+                     <b>
+                        Form {dirty ? "*" : ""} (valid: {errors.length === 0 ? "YES" : "NO"})
+                     </b>
                   </div>
                   {errors && (
                      <div>
@@ -42,7 +46,13 @@ export default function App() {
                   )}
                   <div>
                      <input type="text" name="name" placeholder="name" />
+                     <input type="number" name="age" placeholder="age" defaultValue={1} />
                      <input type="text" name="url" placeholder="url" />
+                  </div>
+                  <div>
+                     <button type="button" onClick={reset}>
+                        reset
+                     </button>
                   </div>
                </>
             )}

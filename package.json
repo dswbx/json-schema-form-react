@@ -35,6 +35,7 @@
     "format": ["esm"],
     "outdir": "dist",
     "treeshake": true,
+    "minify": true,
     "metafile": true
   },
   "dependencies": {

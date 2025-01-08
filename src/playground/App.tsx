@@ -1,7 +1,7 @@
 import type { JsonError, JsonSchema } from "json-schema-library";
-import { Draft07 } from "json-schema-library";
+import { Draft2019 } from "json-schema-library";
 import { useState } from "react";
-import { Form } from "../Form";
+import { Form, type Validator } from "../Form";
 
 const schema = {
    type: "object",
@@ -13,10 +13,13 @@ const schema = {
    required: ["name", "age"]
 };
 
-function validate(schema: JsonSchema, data: any): JsonError[] {
-   const lib = new Draft07(schema);
-   return lib.validate(data);
+class JsonValidator implements Validator<JsonError> {
+   async validate(schema: JsonSchema, data: any) {
+      return new Draft2019(schema).validate(data);
+   }
 }
+
+const validator = new JsonValidator();
 
 export default function App() {
    const [data, setData] = useState({});
@@ -28,9 +31,8 @@ export default function App() {
             schema={schema}
             onChange={(data) => setData(data)}
             onSubmit={(data) => setSubmitted(data)}
-            validate={validate}
+            validator={validator}
             validationMode="change"
-            hiddenSubmit
          >
             {({ errors, submitting, dirty, submit, reset }) => (
                <>
@@ -40,9 +42,11 @@ export default function App() {
                      </b>
                   </div>
                   {errors && (
-                     <div>
-                        <pre>{JSON.stringify(errors, null, 2)}</pre>
-                     </div>
+                     <ul>
+                        {errors.map((error) => (
+                           <li key={error.data.pointer}>{error.message}</li>
+                        ))}
+                     </ul>
                   )}
                   <div>
                      <input type="text" name="name" placeholder="name" />
@@ -50,6 +54,7 @@ export default function App() {
                      <input type="text" name="url" placeholder="url" />
                   </div>
                   <div>
+                     <button type="submit">submit</button>
                      <button type="button" onClick={reset}>
                         reset
                      </button>

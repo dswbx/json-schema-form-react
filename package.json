@@ -1,13 +1,18 @@
 {
   "name": "json-schema-form-react",
-  "module": "index.ts",
+  "version": "0.0.1",
   "type": "module",
   "license": "MIT",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@happy-dom/global-registrator": "^16.5.2",
     "@tsconfig/strictest": "^2.0.5",
     "@types/bun": "latest",
     "@types/react": "^19.0.3",
@@ -31,14 +36,13 @@
     "bundle": true,
     "clean": true,
     "dts": true,
-    "external": ["json-schema-library"],
     "format": ["esm"],
     "outdir": "dist",
     "treeshake": true,
-    "minify": true,
     "metafile": true
   },
-  "dependencies": {
-    "json-schema-form-react": "."
-  }
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": ["dist/index.d.ts", "dist/index.js", "README.md"]
 }

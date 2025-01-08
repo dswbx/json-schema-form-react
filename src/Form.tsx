@@ -1,4 +1,3 @@
-import { type JsonSchema } from "json-schema-library";
 import {
    type ComponentPropsWithoutRef,
    type ForwardedRef,
@@ -11,18 +10,19 @@ import {
    useState
 } from "react";
 import { formDataToNestedObject } from "./lib/form-data";
+import type { JSONSchema } from "./types";
 
-const cache = new Map<string, JsonSchema>();
+const cache = new Map<string, JSONSchema>();
 
 export type ChangeSet = { name: string; value: any };
-export type ValidationFn<FormData = any, Err = unknown> = (
-   schema: JsonSchema,
-   data: FormData
-) => Promise<Err[]> | Err[];
+
+export type Validator<Err = unknown, FormData = any> = {
+   validate: (schema: JSONSchema, data: FormData) => Promise<Err[]> | Err[];
+};
 
 export type FormRenderProps<Err> = {
    errors: Err[];
-   schema: JsonSchema;
+   schema: JSONSchema;
    submitting: boolean;
    dirty: boolean;
    submit: () => Promise<void>;
@@ -42,8 +42,8 @@ export type FormProps<FormData, ValFn, Err> = Omit<
    ComponentPropsWithoutRef<"form">,
    "onSubmit" | "onChange" | "children"
 > & {
-   schema: `http${string}` | `/${string}` | JsonSchema;
-   validate: ValidationFn<FormData, Err>;
+   schema: `http${string}` | `/${string}` | JSONSchema;
+   validator: Validator<Err, FormData>;
    validationMode?: "submit" | "change";
    children: (props: FormRenderProps<Err>) => ReactNode;
    onChange?: (formData: FormData, changed: ChangeSet) => void | Promise<void>;
@@ -57,7 +57,7 @@ export type FormProps<FormData, ValFn, Err> = Omit<
 const FormComponent = <FormData, ValFn, Err>(
    {
       schema: initialSchema,
-      validate: validateFn,
+      validator,
       validationMode = "submit",
       children,
       onChange,
@@ -71,7 +71,7 @@ const FormComponent = <FormData, ValFn, Err>(
    ref: ForwardedRef<FormRef<FormData, Err>>
 ) => {
    const is_schema = typeof initialSchema !== "string";
-   const [schema, setSchema] = useState<JsonSchema | undefined>(
+   const [schema, setSchema] = useState<JSONSchema | undefined>(
       is_schema ? initialSchema : undefined
    );
    const [submitting, setSubmitting] = useState(false);
@@ -102,7 +102,7 @@ const FormComponent = <FormData, ValFn, Err>(
             const res = await fetch(initialSchema);
 
             if (res.ok) {
-               const s = (await res.json()) as JsonSchema;
+               const s = (await res.json()) as JSONSchema;
                setSchema(s);
                cache.set(initialSchema, s);
             }
@@ -139,7 +139,7 @@ const FormComponent = <FormData, ValFn, Err>(
       const formData = new FormData(form);
       const data = formDataToNestedObject(formData, form) as FormData;
 
-      const errors = await validateFn(schema, data);
+      const errors = await validator.validate(schema, data);
       setErrors(errors);
       return { data, errors };
    }
@@ -191,20 +191,22 @@ const FormComponent = <FormData, ValFn, Err>(
             reset,
             resetDirty,
             submitting,
-            errors: errors.length > 0 ? errors : []
+            errors
          })}
 
-         {hiddenSubmit && <input type="submit" style={{ visibility: "hidden" }} />}
+         {hiddenSubmit && (
+            <input type="submit" style={{ visibility: "hidden" }} disabled={errors.length > 0} />
+         )}
       </form>
    );
 };
 
 export const Form = forwardRef(FormComponent) as <
    FormData = any,
-   ValFn = ValidationFn,
-   Err = ValFn extends ValidationFn<FormData, infer E> ? Awaited<E> : never
+   ValidatorActual = Validator,
+   Err = ValidatorActual extends Validator<infer E, FormData> ? Awaited<E> : never
 >(
-   props: FormProps<FormData, ValFn, Err> & {
+   props: FormProps<FormData, ValidatorActual, Err> & {
       ref?: ForwardedRef<HTMLFormElement>;
    }
 ) => ReturnType<typeof FormComponent>;

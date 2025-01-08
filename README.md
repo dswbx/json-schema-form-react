@@ -24,7 +24,7 @@ import { Form, type Validator } from "json-schema-form-react";
 // using json-schema-library, but could be any
 class JsonValidator implements Validator<JsonError> {
    async validate(schema: JsonSchema, data: any) {
-      return new Draft07(schema).validate(data);
+      return new Draft2019(schema).validate(data);
    }
 }
 const validator = new JsonValidator();

@@ -31,6 +31,7 @@
     "bundle": true,
     "clean": true,
     "dts": true,
+    "external": ["json-schema-library"],
     "format": ["esm"],
     "outdir": "dist",
     "treeshake": true,

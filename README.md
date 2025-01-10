@@ -1,8 +1,9 @@
 # json-schema-form-react
 
-A tiny (4.5kb minified, 1.6kb gzipped) dependency-free json schema form library for react to validate `FormData` against a JSON Schema. 
+A tiny (4.5kb minified, 1.6kb gzipped) dependency-free json schema form library for react to validate `FormData` against a JSON Schema.
 
 ## Motivation
+
 There are several libraries helping with JSON Schema and forms, but most focus on autogenerating them. While this is very handy at first, you'll find yourself digging deep into the documentation to customize the generated forms. On the other hand, there are libraries for form management, each with its very own API to learn.
 
 This library aims to be a minimal abstraction between native browser forms and JSON schema. In addition, it doesn't assume or require deep understanding of validation libraries, it's very easy to use any JSON schema validator. Create a class with a `validate` function that takes in the schema and form data, returning the error schema (and inferring the type correctly) that library provides – no transformation needed.
@@ -14,12 +15,13 @@ npm install json-schema-form-react
 ```
 
 ## Usage
+
 Here is a minimal example to get it running using `json-schema-library` as the validator (you can use any):
 
 ```tsx
 import type { JsonError, JsonSchema } from "json-schema-library";
 import { Draft2019 } from "json-schema-library";
-import { Form, type Validator } from "json-schema-form-react"; 
+import { Form, type Validator } from "json-schema-form-react";
 
 // using json-schema-library, but could be any
 class JsonValidator implements Validator<JsonError> {
@@ -35,7 +37,7 @@ const schema = {
       name: { type: "string" },
       age: { type: "number", minimum: 1 },
    },
-   required: ["name"]
+   required: ["name"],
 } satisfies JsonSchema;
 
 export default function App() {
@@ -51,7 +53,8 @@ export default function App() {
             <>
                <div>
                   <b>
-                     Form {dirty ? "*" : ""} (valid: {errors.length === 0 ? "valid" : "invalid"})
+                     Form {dirty ? "*" : ""} (valid:{" "}
+                     {errors.length === 0 ? "valid" : "invalid"})
                   </b>
                </div>
                <div>
@@ -60,17 +63,64 @@ export default function App() {
                </div>
                <div>
                   <button type="submit">submit</button>
-                  <button type="button" onClick={reset}>reset</button>
+                  <button type="button" onClick={reset}>
+                     reset
+                  </button>
                </div>
             </>
          )}
       </Form>
-   )
+   );
+}
+```
+
+## Validators
+
+A custom validator can be created by implementing the `Validator` interface:
+
+```ts
+type Validator<Err = unknown, FormData = any> = {
+   validate: (
+      schema: JSONSchema | any,
+      data: FormData
+   ) => Promise<Err[]> | Err[];
+};
+```
+
+### `json-schema-library`
+
+The example above uses [json-schema-library](https://github.com/sagold/json-schema-library) to validate the form data against a JSON Schema. The validator implements the `Validator` interface:
+
+```ts
+import type { Validator } from "json-schema-form-react";
+import { Draft2019 } from "json-schema-library";
+
+class JsonValidator implements Validator<JsonError> {
+   async validate(schema: JsonSchema, data: any) {
+      return new Draft2019(schema).validate(data);
+   }
+}
+```
+
+### `@sinclair/typebox`
+
+Here's an example validator implementation using [TypeBox](https://github.com/sinclairzx81/typebox):
+
+```ts
+import type { Validator } from "json-schema-form-react";
+import { Value } from "@sinclair/typebox/value";
+
+class TypeboxValidator implements Validator<ValueError> {
+   async validate(schema: TSchema, data: any) {
+      return Value.Check(schema, data) ? [] : [...Value.Errors(schema, data)];
+   }
 }
 ```
 
 ## Todos
+
 It's very early, there are some functionalities planned:
-- [ ] add an error map to identify the erroring field easily
-- [ ] add a complementary library to automatically generate the form, with the freedom of modifying the layout and props inline
-- [ ] more examples for various validation and UI libraries
+
+-  [ ] add an error map to identify the erroring field easily
+-  [ ] add a complementary library to automatically generate the form, with the freedom of modifying the layout and props inline
+-  [ ] more examples for various validation and UI libraries

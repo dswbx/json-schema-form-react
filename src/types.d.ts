@@ -64,5 +64,5 @@ export interface JSONSchema {
    // Definitions
    definitions?: { [key: string]: JSONSchemaDefinition };
    $comment?: string;
-   [key: string]: any; // catch-all for custom extensions
+   [key: string | symbol]: any; // catch-all for custom extensions
 }

@@ -7,7 +7,7 @@ import {
    useEffect,
    useImperativeHandle,
    useRef,
-   useState
+   useState,
 } from "react";
 import { formDataToNestedObject } from "./lib/form-data";
 import type { JSONSchema } from "./types";
@@ -17,7 +17,10 @@ const cache = new Map<string, JSONSchema>();
 export type ChangeSet = { name: string; value: any };
 
 export type Validator<Err = unknown, FormData = any> = {
-   validate: (schema: JSONSchema, data: FormData) => Promise<Err[]> | Err[];
+   validate: (
+      schema: JSONSchema | any,
+      data: FormData
+   ) => Promise<Err[]> | Err[];
 };
 
 export type FormRenderProps<Err> = {
@@ -48,7 +51,10 @@ export type FormProps<FormData, ValFn, Err> = Omit<
    children: (props: FormRenderProps<Err>) => ReactNode;
    onChange?: (formData: FormData, changed: ChangeSet) => void | Promise<void>;
    onSubmit?: (formData: FormData) => void | Promise<void>;
-   onSubmitInvalid?: (errors: Err[], formData: FormData) => void | Promise<void>;
+   onSubmitInvalid?: (
+      errors: Err[],
+      formData: FormData
+   ) => void | Promise<void>;
    resetOnSubmit?: boolean;
    revalidateOnError?: boolean;
    hiddenSubmit?: boolean;
@@ -88,7 +94,7 @@ const FormComponent = <FormData, ValFn, Err>(
       validate: validate,
       reset: reset,
       resetDirty,
-      formRef
+      formRef,
    }));
 
    useEffect(() => {
@@ -114,7 +120,11 @@ const FormComponent = <FormData, ValFn, Err>(
       const form = formRef.current;
       if (!form) return;
       setDirty(true);
-      const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+      const target = e.target as
+         | HTMLInputElement
+         | HTMLSelectElement
+         | HTMLTextAreaElement
+         | null;
 
       if (!target || !form.contains(target)) {
          return; // Ignore events from outside the form
@@ -127,7 +137,10 @@ const FormComponent = <FormData, ValFn, Err>(
 
       await onChange?.(data, { name, value });
 
-      if ((revalidateOnError && errors.length > 0) || validationMode === "change") {
+      if (
+         (revalidateOnError && errors.length > 0) ||
+         validationMode === "change"
+      ) {
          await validate();
       }
    }
@@ -163,13 +176,19 @@ const FormComponent = <FormData, ValFn, Err>(
       } else {
          setSubmitting(true);
          try {
-            await onSubmit?.(data);
-            if (resetOnSubmit) {
-               reset();
+            if (onSubmit) {
+               await onSubmit?.(data);
+               if (resetOnSubmit) {
+                  reset();
+               }
+            } else {
+               form.submit();
             }
          } catch (e) {
             console.error(e);
-            console.warn("You should wrap your submit handler in a try/catch block");
+            console.warn(
+               "You should wrap your submit handler in a try/catch block"
+            );
          } finally {
             setSubmitting(false);
             setDirty(false);
@@ -183,7 +202,12 @@ const FormComponent = <FormData, ValFn, Err>(
    }
 
    return (
-      <form {...formProps} onSubmit={handleSubmit} ref={formRef} onChange={handleChangeEvent}>
+      <form
+         {...formProps}
+         onSubmit={handleSubmit}
+         ref={formRef}
+         onChange={handleChangeEvent}
+      >
          {children({
             schema: schema as any,
             submit,
@@ -191,11 +215,15 @@ const FormComponent = <FormData, ValFn, Err>(
             reset,
             resetDirty,
             submitting,
-            errors
+            errors,
          })}
 
          {hiddenSubmit && (
-            <input type="submit" style={{ visibility: "hidden" }} disabled={errors.length > 0} />
+            <input
+               type="submit"
+               style={{ visibility: "hidden" }}
+               disabled={errors.length > 0}
+            />
          )}
       </form>
    );
@@ -204,7 +232,9 @@ const FormComponent = <FormData, ValFn, Err>(
 export const Form = forwardRef(FormComponent) as <
    FormData = any,
    ValidatorActual = Validator,
-   Err = ValidatorActual extends Validator<infer E, FormData> ? Awaited<E> : never
+   Err = ValidatorActual extends Validator<infer E, FormData>
+      ? Awaited<E>
+      : never
 >(
    props: FormProps<FormData, ValidatorActual, Err> & {
       ref?: ForwardedRef<HTMLFormElement>;

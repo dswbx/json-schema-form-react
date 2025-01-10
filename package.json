@@ -1,12 +1,13 @@
 {
   "name": "json-schema-form-react",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "license": "MIT",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup",
+    "watch": "tsup --watch",
     "test": "bun test",
     "prepublishOnly": "bun run build"
   },

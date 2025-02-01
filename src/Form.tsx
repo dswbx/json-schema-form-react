@@ -3,7 +3,9 @@ import {
    type ForwardedRef,
    type ReactNode,
    type RefObject,
+   createContext,
    forwardRef,
+   useContext,
    useEffect,
    useImperativeHandle,
    useRef,
@@ -32,6 +34,8 @@ export type FormRenderProps<Err> = {
    reset: () => void;
    resetDirty: () => void;
 };
+
+const FormContext = createContext<FormRenderProps<any>>(undefined!);
 
 export type FormRef<FormData, Err> = {
    submit: () => Promise<void>;
@@ -201,6 +205,16 @@ const FormComponent = <FormData, ValFn, Err>(
       setErrors([]);
    }
 
+   const context = {
+      schema: schema as any,
+      submit,
+      dirty,
+      reset,
+      resetDirty,
+      submitting,
+      errors,
+   };
+
    return (
       <form
          {...formProps}
@@ -208,15 +222,9 @@ const FormComponent = <FormData, ValFn, Err>(
          ref={formRef}
          onChange={handleChangeEvent}
       >
-         {children({
-            schema: schema as any,
-            submit,
-            dirty,
-            reset,
-            resetDirty,
-            submitting,
-            errors,
-         })}
+         <FormContext.Provider value={context}>
+            {children(context)}
+         </FormContext.Provider>
 
          {hiddenSubmit && (
             <input
@@ -228,6 +236,25 @@ const FormComponent = <FormData, ValFn, Err>(
       </form>
    );
 };
+
+export function useFormContext() {
+   const context = useContext(FormContext);
+   if (!context) {
+      throw new Error("useFormContext() must be used within a Form component");
+   }
+   return context;
+}
+
+export function useFieldContext(name: string) {
+   const context = useFormContext();
+   const path = name.includes(".") ? name.split(".") : [name];
+   const subschema = path.reduce((schema, key) => {
+      return schema.properties?.[key] as JSONSchema;
+   }, context.schema);
+   return {
+      schema: subschema,
+   };
+}
 
 export const Form = forwardRef(FormComponent) as <
    FormData = any,

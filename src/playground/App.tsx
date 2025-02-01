@@ -1,16 +1,22 @@
 import type { JsonError, JsonSchema } from "json-schema-library";
 import { Draft2019 } from "json-schema-library";
 import { useState } from "react";
-import { Form, type Validator } from "../Form";
+import { Form, type Validator, useFieldContext } from "../Form";
 
 const schema = {
    type: "object",
    properties: {
       name: { type: "string" },
       age: { type: "number", minimum: 1 },
-      url: { type: "string" }
+      url: { type: "string", title: "URL" },
+      nested: {
+         type: "object",
+         properties: {
+            prop: { type: "string", title: "Nested Prop" },
+         },
+      },
    },
-   required: ["name", "age"]
+   required: ["name", "age"],
 };
 
 class JsonValidator implements Validator<JsonError> {
@@ -38,7 +44,8 @@ export default function App() {
                <>
                   <div>
                      <b>
-                        Form {dirty ? "*" : ""} (valid: {errors.length === 0 ? "YES" : "NO"})
+                        Form {dirty ? "*" : ""} (valid:{" "}
+                        {errors.length === 0 ? "YES" : "NO"})
                      </b>
                   </div>
                   {errors && (
@@ -50,8 +57,15 @@ export default function App() {
                   )}
                   <div>
                      <input type="text" name="name" placeholder="name" />
-                     <input type="number" name="age" placeholder="age" defaultValue={1} />
-                     <input type="text" name="url" placeholder="url" />
+                     <input
+                        type="number"
+                        name="age"
+                        placeholder="age"
+                        defaultValue={1}
+                     />
+                     {/* <input type="text" name="url" placeholder="url" /> */}
+                     <Field name="url" />
+                     <Field name="nested.prop" />
                   </div>
                   <div>
                      <button type="submit">submit</button>
@@ -68,4 +82,10 @@ export default function App() {
          <pre>{JSON.stringify(submitted, null, 2)}</pre>
       </div>
    );
+}
+
+function Field({ name }: { name: string }) {
+   const { schema } = useFieldContext(name);
+   console.log(schema);
+   return <div>{schema.type}</div>;
 }
